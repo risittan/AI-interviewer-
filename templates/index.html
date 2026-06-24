@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CV Text Extractor & Tool Calling Demo</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>CV Extraction via Tool Calling</h1>
+            <p>Upload a .docx file to see the DeepSeek model call the <code>extract_cv_text</code> tool dynamically.</p>
+        </header>
+
+        <main>
+            <section class="upload-section">
+                <div class="upload-box" id="uploadBox">
+                    <input type="file" id="fileInput" accept=".docx" hidden>
+                    <label for="fileInput" class="upload-label">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="upload-icon"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                        <span id="fileName">Click to select or drag and drop a .docx file</span>
+                    </label>
+                </div>
+                <button id="extractBtn" class="btn primary-btn" disabled>Extract Text</button>
+            </section>
+
+            <section class="results-section hidden" id="resultsSection">
+                <h2>Process Logs</h2>
+                <div class="logs-container" id="logsContainer">
+                    <!-- Logs will be appended here -->
+                </div>
+
+                <h2>Final AI Response</h2>
+                <div class="final-response" id="finalResponse">
+                    <!-- Final text will be shown here -->
+                </div>
+            </section>
+
+            <section class="interview-section hidden" id="interviewSection" style="margin-top: 2rem;">
+                <h2>Mock Interview</h2>
+                <button id="startInterviewBtn" class="btn primary-btn">Start Interview</button>
+                <div id="qaHistoryContainer" style="margin-top: 1.5rem; font-size: 0.95rem; color: var(--text-secondary); white-space: pre-wrap;"></div>
+                <div id="questionContainer" style="margin-top: 1rem; font-weight: 600; font-size: 1.1rem; color: var(--text-primary);"></div>
+                <div id="answerSection" class="hidden" style="margin-top: 1rem;">
+                    <textarea id="answerInput" class="text-input" rows="4" placeholder="Type your answer here..." style="width: 100%; padding: 0.75rem; border: 1px solid var(--border-color); border-radius: 4px; font-family: inherit; margin-bottom: 0.5rem;"></textarea>
+                    <div style="display: flex; gap: 0.5rem; align-items: center;">
+                        <button id="submitAnswerBtn" class="btn secondary-btn">Submit Answer</button>
+                        <button id="recordAnswerBtn" class="btn secondary-btn" style="display: flex; align-items: center; gap: 0.5rem;">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="22"></line></svg>
+                            Record Voice
+                        </button>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>
