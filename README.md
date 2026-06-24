@@ -1,4 +1,8 @@
 ## AI Interviewer (Tool Calling Demo)
+
+**Status: Work in Progress**  
+> I am currently implementing the core architecture for this project as part of my post-graduation AI engineering track.
+
 An advanced web application that simulates a technical interview. This project demonstrates LLM tool-calling (function calling), multimodal audio capabilities, and context-aware conversation flows.
 
 ## Features

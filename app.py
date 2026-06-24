@@ -52,10 +52,10 @@ def generate_next_question(cv_text: str, previous_qa_history: str) -> str:
     ]
     
     # Pass tools=None to prevent the model from recursively calling tools
-    message = call_deepseek_api(messages, api_key, tools=None)
+    message = call_local_api(messages, api_key, tools=None)
     if message and "content" in message:
         return message["content"].strip()
-    return "Error: Failed to generate question from DeepSeek."
+    return "Error: Failed to generate question from local API."
 
 def score_answer(question: str, answer: str, cv_text: str) -> str:
     """Score the candidate's answer based on the question and CV."""
@@ -95,7 +95,7 @@ def score_answer(question: str, answer: str, cv_text: str) -> str:
         {"role": "user", "content": user_prompt}
     ]
     
-    message = call_deepseek_api(messages, api_key, tools=None)
+    message = call_local_api(messages, api_key, tools=None)
     if message and "content" in message:
         content = message["content"].strip()
         if content.startswith("```json"):
@@ -110,7 +110,7 @@ def score_answer(question: str, answer: str, cv_text: str) -> str:
         "score": 0,
         "strength": "Error evaluating answer.",
         "improvement": "System failure.",
-        "verdict": "Could not contact DeepSeek API."
+        "verdict": "Could not contact local API."
     })
 
 # Map function names to the actual Python functions
@@ -187,33 +187,36 @@ TOOLS_SCHEMA = [
     }
 ]
 
-def call_deepseek_api(messages, api_key, tools="DEFAULT"):
+def call_local_api(messages, api_key=None, tools="DEFAULT"):
     """
-    Calls the OpenRouter API to chat with the DeepSeek model,
+    Calls the local Ollama API to chat with the model,
     passing the tools schema to allow for function calling.
     """
-    url = "https://openrouter.ai/api/v1/chat/completions"
-    headers = {
-        "Authorization": f"Bearer {api_key}",
-        "Content-Type": "application/json"
-    }
+    url = "http://localhost:11434/api/chat"
     
     payload = {
-        "model": "openrouter/free",
+        "model": "rafw007/qwen35-claude-coder:4b",
         "messages": messages,
+        "stream": False
     }
     
     if tools == "DEFAULT":
         payload["tools"] = TOOLS_SCHEMA
-        payload["tool_choice"] = "auto"
     elif tools is not None:
         payload["tools"] = tools
-        payload["tool_choice"] = "auto"
 
     try:
-        response = requests.post(url, headers=headers, json=payload)
+        response = requests.post(url, json=payload)
         response.raise_for_status()
-        return response.json()['choices'][0]['message']
+        message = response.json()['message']
+        
+        # Ollama returns tool arguments as a dict, but our app expects a JSON string
+        if message.get("tool_calls"):
+            for tc in message["tool_calls"]:
+                if isinstance(tc.get("function", {}).get("arguments"), dict):
+                    tc["function"]["arguments"] = json.dumps(tc["function"]["arguments"])
+                    
+        return message
     except requests.exceptions.RequestException as e:
         print(f"API Request Error: {e}")
         return None
@@ -250,13 +253,14 @@ def upload_file():
         logs.append({"type": "info", "message": f"Saved file to {file_path}"})
         
         # Step 1: Call model
-        logs.append({"type": "api_call", "message": "Calling DeepSeek API with user request..."})
-        message = call_deepseek_api(messages, api_key)
+        logs.append({"type": "api_call", "message": "Calling local API with user request..."})
+        message = call_local_api(messages, api_key)
         
         if not message:
             return jsonify({"error": "Failed to get response from API"}), 500
 
         final_response_content = ""
+        extracted_text_fallback = ""
 
         # Step 2: Check for tool calls
         if message.get("tool_calls"):
@@ -272,6 +276,9 @@ def upload_file():
                     function_to_call = AVAILABLE_TOOLS[function_name]
                     function_response = function_to_call(**function_args)
                     
+                    if function_name == "extract_cv_text":
+                        extracted_text_fallback = function_response
+                        
                     logs.append({"type": "tool_result", "message": "Tool executed successfully. Text extracted."})
                     
                     messages.append({
@@ -290,10 +297,15 @@ def upload_file():
                     })
             
             # Step 3: Final call
-            logs.append({"type": "api_call", "message": "Calling DeepSeek API with tool results to formulate final answer..."})
-            final_message = call_deepseek_api(messages, api_key)
+            logs.append({"type": "api_call", "message": "Calling local API with tool results to formulate final answer..."})
+            final_message = call_local_api(messages, api_key)
             if final_message:
                 final_response_content = final_message.get("content", "")
+                
+            if not final_response_content.strip() and extracted_text_fallback:
+                final_response_content = extracted_text_fallback
+                logs.append({"type": "info", "message": "Model returned empty response. Using raw extracted text as fallback."})
+            elif final_message:
                 logs.append({"type": "success", "message": "Final response received."})
             
         else:
