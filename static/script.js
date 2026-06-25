@@ -138,6 +138,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     let previousQaHistory = '';
     let currentQuestion = '';
+    
+    let questionCount = 0;
+    const MAX_QUESTIONS = 5;
+    let interviewScores = [];
 
     function fallbackBrowserTTS(text) {
         if ('speechSynthesis' in window) {
@@ -184,9 +188,15 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     async function fetchNextQuestion() {
+        if (questionCount >= MAX_QUESTIONS) {
+            showFinalSummary();
+            return;
+        }
+        
+        questionCount++;
         startInterviewBtn.style.display = 'none';
         answerSection.classList.add('hidden');
-        questionContainer.innerHTML = '<span class="loader"></span> Generating Question...';
+        questionContainer.innerHTML = `<span class="loader"></span> Generating Question ${questionCount} of ${MAX_QUESTIONS}...`;
 
         try {
             const response = await fetch('/api/generate_question', {
@@ -281,6 +291,10 @@ document.addEventListener('DOMContentLoaded', () => {
                         <div><strong>Improvement:</strong> ${scoreData.improvement}</div>
                     `;
                     historyEntry.appendChild(feedbackDiv);
+                    
+                    if (scoreData && typeof scoreData.score === 'number') {
+                        interviewScores.push(scoreData.score);
+                    }
                 } else {
                     console.error("Failed to get score");
                 }
@@ -293,9 +307,41 @@ document.addEventListener('DOMContentLoaded', () => {
                 submitAnswerBtn.innerHTML = originalBtnText;
             }
 
-            // Generate next question
-            fetchNextQuestion();
+            // Generate next question or show summary
+            if (questionCount >= MAX_QUESTIONS) {
+                showFinalSummary();
+            } else {
+                fetchNextQuestion();
+            }
         });
+    }
+    
+    function showFinalSummary() {
+        answerSection.classList.add('hidden');
+        questionContainer.classList.add('hidden');
+        
+        const sum = interviewScores.reduce((a, b) => a + b, 0);
+        const avg = interviewScores.length > 0 ? (sum / interviewScores.length).toFixed(1) : 0;
+        
+        const summaryDiv = document.createElement('div');
+        summaryDiv.style.marginTop = '2rem';
+        summaryDiv.style.padding = '1.5rem';
+        summaryDiv.style.backgroundColor = 'rgba(16, 185, 129, 0.1)';
+        summaryDiv.style.border = '2px solid #10b981';
+        summaryDiv.style.borderRadius = '8px';
+        summaryDiv.style.textAlign = 'center';
+        
+        summaryDiv.innerHTML = `
+            <h3 style="color: #10b981; font-size: 1.5rem; margin-bottom: 1rem;">Interview Complete!</h3>
+            <p style="font-size: 1.1rem; margin-bottom: 1rem;">You've completed all ${MAX_QUESTIONS} questions.</p>
+            <div style="font-size: 2rem; font-weight: 700; color: var(--text-primary); margin-bottom: 1rem;">
+                Final Score: ${avg} / 10
+            </div>
+            <p style="color: var(--text-secondary);">Review your full Q&A history above to see detailed feedback on each answer.</p>
+            <button onclick="window.scrollTo({top: 0, behavior: 'smooth'})" class="btn primary-btn" style="margin-top: 1rem;">Back to Top</button>
+        `;
+        
+        document.getElementById('interviewSection').appendChild(summaryDiv);
     }
 
     const recordAnswerBtn = document.getElementById('recordAnswerBtn');
