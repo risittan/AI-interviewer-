@@ -1,61 +1,236 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CV Text Extractor & Tool Calling Demo</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <title>A.I. Interviewer - Technical Assessment Demo</title>
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap"
+        rel="stylesheet">
+
+    <!-- Styles -->
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
-<body>
-    <div class="container">
-        <header>
-            <h1>CV Extraction via Tool Calling</h1>
-            <p>Upload a .docx file to see the DeepSeek model call the <code>extract_cv_text</code> tool dynamically.</p>
+
+<body class="app-body">
+    <div id="app-container" class="app-container">
+        <!-- Header Section -->
+        <header class="site-header">
+            <div class="brand-section">
+                <svg class="logo-icon" xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24"
+                    fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path
+                        d="M12 3a9 9 0 0 0-6.57 15l-.83.83A1 1 0 0 0 4.5 18h15a1 1 0 0 0 .71-1.71L12 21a9 9 0 0 0-6.57-15l-.83.83A1 1 0 0 0 4.5 18h15a1 1 0 0 0 .71-1.71L12 3Z" />
+                    <path d="M9 12v6m6-6v6" stroke-width="1.5" />
+                </svg>
+                <div class="brand-text">
+                    <h1>A.I. Interviewer</h1>
+                    <p class="tagline">Technical Assessment & Tool Calling Demo</p>
+                </div>
+            </div>
         </header>
 
-        <main>
-            <section class="upload-section">
-                <div class="upload-box" id="uploadBox">
-                    <input type="file" id="fileInput" accept=".docx" hidden>
-                    <label for="fileInput" class="upload-label">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="upload-icon"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
-                        <span id="fileName">Click to select or drag and drop a .docx file</span>
+        <!-- Main Content -->
+        <main id="app-main" class="app-main">
+            <!-- Upload Section -->
+            <section class="card upload-card active-section" aria-labelledby="upload-heading">
+                <h2 id="upload-heading" class="section-title">Upload CV</h2>
+
+                <div class="drop-zone" id="dropZone">
+                    <input type="file" id="fileInput"
+                        accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document" hidden
+                        aria-label="Select CV file">
+
+                    <label for="fileInput" class="upload-trigger" tabindex="-1">
+                        <div class="drop-zone-content">
+                            <svg class="icon-drop" xmlns="http://www.w3.org/2000/svg" width="48" height="48"
+                                viewBox="0 0 24 24" fill="none" stroke="#60a5fa" stroke-width="1.5"
+                                stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                                <polyline points="17 8 12 3 7 8" />
+                                <line x1="12" y1="3" x2="12" y2="15" />
+                            </svg>
+                            <p class="drop-text">Click to select or drag & drop your CV</p>
+                            <span class="file-hint">.docx files only (max 10MB)</span>
+                        </div>
                     </label>
+
+                    <!-- Selected File Display -->
+                    <div id="selectedFileDisplay" class="selected-file hidden"></div>
                 </div>
-                <button id="extractBtn" class="btn primary-btn" disabled>Extract Text</button>
+
+                <button id="extractBtn" class="btn btn-primary disabled-btn" aria-disabled="true">
+                    Extract CV Text &bull; Process with AI
+                </button>
             </section>
 
-            <section class="results-section hidden" id="resultsSection">
-                <h2>Process Logs</h2>
-                <div class="logs-container" id="logsContainer">
-                    <!-- Logs will be appended here -->
+            <!-- Results Section -->
+            <section class="card results-card hidden-section" aria-labelledby="results-heading">
+                <div class="back-link">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
+                        stroke="#60a5fa" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="m3 7 9-9 9 9" />
+                    </svg>
+                    &bull; Back to Upload
                 </div>
 
-                <h2>Final AI Response</h2>
-                <div class="final-response" id="finalResponse">
-                    <!-- Final text will be shown here -->
+                <h2 id="results-heading" class="section-title">Processing Results</h2>
+
+                <!-- Logs Container -->
+                <div class="logs-wrapper">
+                    <label for="logsContainer" class="visually-hidden">Process logs</label>
+                    <pre id="logsContainer" class="terminal-window" aria-live="polite"></pre>
                 </div>
+
+                <!-- Final Response Display -->
+                <div class="response-display hidden-section">
+                    <h3 class="display-title">AI Analysis Result</h3>
+                    <div id="finalResponse" class="analysis-card" role="region" aria-live="assertive"></div>
+                </div>
+
+                <!-- Extracted Text Preview -->
+                <details class="preview-toggle hidden-section" open>
+                    <summary class="toggle-label">View Extracted CV Content</summary>
+                    <pre id="extractedTextPreview" class="code-preview"></pre>
+                </details>
             </section>
 
-            <section class="interview-section hidden" id="interviewSection" style="margin-top: 2rem;">
-                <h2>Mock Interview</h2>
-                <button id="startInterviewBtn" class="btn primary-btn">Start Interview</button>
-                <div id="qaHistoryContainer" style="margin-top: 1.5rem; font-size: 0.95rem; color: var(--text-secondary); white-space: pre-wrap;"></div>
-                <div id="questionContainer" style="margin-top: 1rem; font-weight: 600; font-size: 1.1rem; color: var(--text-primary);"></div>
-                <div id="answerSection" class="hidden" style="margin-top: 1rem;">
-                    <textarea id="answerInput" class="text-input" rows="4" placeholder="Type your answer here..." style="width: 100%; padding: 0.75rem; border: 1px solid var(--border-color); border-radius: 4px; font-family: inherit; margin-bottom: 0.5rem;"></textarea>
-                    <div style="display: flex; gap: 0.5rem; align-items: center;">
-                        <button id="submitAnswerBtn" class="btn secondary-btn">Submit Answer</button>
-                        <button id="recordAnswerBtn" class="btn secondary-btn" style="display: flex; align-items: center; gap: 0.5rem;">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="22"></line></svg>
-                            Record Voice
-                        </button>
+            <!-- Interview Section -->
+            <section class="card interview-card hidden-section" aria-labelledby="interview-heading">
+                <div class="back-link">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
+                        stroke="#60a5fa" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="m3 7 9-9 9 9" />
+                    </svg>
+                    &bull; Back to Results
+                </div>
+
+                <h2 id="interview-heading" class="section-title">Mock Technical Interview</h2>
+
+                <!-- Start Button -->
+                <button id="startInterviewBtn" class="btn btn-primary full-width">
+                    Begin Assessment (5 Questions) &bull; Audio Enabled
+                </button>
+
+                <!-- Q&A History Display -->
+                <div id="qaHistoryContainer" class="history-container"></div>
+
+                <!-- Question Display -->
+                <div id="questionContainer" class="question-display hidden-section">
+                    <span class="badge question-badge">Question {{ questionCount }} of 5</span>
+                    <p id="aiQuestionText" class="question-text"></p>
+
+                    <!-- Audio Controls for AI Question -->
+                    <button id="playAiAudioBtn" class="audio-control-btn hidden-section" aria-label="Play AI audio">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
+                            stroke="#60a5fa" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
+                            <path d="M15.54 8.46a5 5 0 0 1 0 7.07" />
+                        </svg>
+                    </button>
+
+                    <!-- Answer Input -->
+                    <div id="answerSection" class="hidden-section">
+                        <label for="answerInput" class="visually-hidden">Your answer</label>
+                        <textarea id="answerInput" class="text-input" rows="4" placeholder="Type your response..."
+                            aria-describedby="answerHint"></textarea>
+
+                        <!-- Answer Actions -->
+                        <div class="action-buttons hidden-section">
+                            <button id="recordAnswerBtn" class="btn btn-secondary record-btn"
+                                aria-label="Record voice answer">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"
+                                    fill="#ef4444" stroke="none">
+                                    <circle cx="12" cy="12" r="7" />
+                                </svg>
+                                Record Voice Answer
+                            </button>
+
+                            <div class="btn-group-spacer"></div>
+
+                            <form id="submitAnswerForm">
+                                <input type="hidden" name="question" value="">
+                                <input type="hidden" name="answer" value="">
+                                <input type="hidden" name="cv_text" value="">
+
+                                <button type="submit" class="btn btn-primary submit-btn">Submit Answer</button>
+                            </form>
+
+                            <!-- Loading States -->
+                        </div>
                     </div>
                 </div>
+
+                <!-- Final Summary Display -->
+                <div id="finalSummaryDisplay" class="summary-display hidden-section"></div>
             </section>
         </main>
+
+        <!-- Footer Section -->
+        <footer class="site-footer">
+            <p>A.I. Interviewer Demo &copy; 2026 | Built with Python/Flask, DeepSeek via OpenRouter</p>
+        </footer>
     </div>
+
+    <!-- Scripts -->
     <script src="{{ url_for('static', filename='script.js') }}"></script>
+
+    <!-- Accessibility Helper (CSS) -->
+    <style>
+        .visually-hidden {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            white-space: nowrap;
+            border-width: 0;
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: rgba(15, 23, 42, 0.5);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: linear-gradient(180deg, #60a5fa, #8b5cf6);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: linear-gradient(180deg, #7dd3fc, #c084fc);
+        }
+
+        /* Smooth Transitions */
+        .app-main>section:not(.hidden-section) {
+            animation: fadeInUp 0.5s ease-out forwards;
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(12px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+    </style>
 </body>
+
 </html>
