@@ -69,17 +69,11 @@ def _llm_classify_question(text: str) -> bool:
     return False
 
 def is_valid_question(text: str) -> bool:
-    """Validates the generated question using an LLM judge instead of a
-    brittle keyword blacklist. Asks the model: 'Is this a legitimate
-    interview question?' — no attacker can bypass this with synonyms."""
+    """Validates the generated question using an LLM judge."""
     if not text or not text.strip():
         return False
-    text = text.strip()
-    # Hard structural checks (these are language-agnostic)
-    if len(text) < 10 or len(text) > 500:
-        return False
-    # Delegate semantic judgment to the LLM
-    verdict = _llm_classify_question(text)
+    
+    verdict = _llm_classify_question(text.strip())
     return verdict
 
 
@@ -118,8 +112,9 @@ def generate_next_question(cv_text: str, previous_qa_history: str) -> str:
     message = call_local_api(messages, api_key, tools=None)
     if message and "content" in message:
         question = message["content"].strip()
+        # Inside generate_next_question:
         if not is_valid_question(question):
-            return "Could you tell me more about your most challenging technical project?"
+            return "Error: Generated question failed security validation. Please try again."
         return question
     return "Error: Failed to generate question from local API."
 
